@@ -26,6 +26,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 const createFileTree = (files: GitFile[]): TreeDataItem[] => {
   const buildNode = (
@@ -97,6 +102,45 @@ const sortTreeNodes = (
         : undefined,
     }));
 };
+
+const EmptyState = () => (
+  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+    <File className="h-16 w-16 mb-4 opacity-20" />
+    <h3 className="text-lg font-medium mb-2">No file selected</h3>
+    <p className="text-sm text-center max-w-[300px]">
+      Search for files using the form above, then select a file from the tree to
+      view its contents
+    </p>
+  </div>
+);
+
+const Header = () => (
+  <div className="border-b border-border/50 pb-6">
+    <div className="flex items-start justify-between">
+      <div>
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/10 p-2 rounded-lg">
+            <File className="h-5 w-5 text-primary" />
+          </div>
+          <h1 className="text-xl font-semibold">Git File Trailblazer</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground max-w-[600px]">
+          Explore your Git repository's history by author. Find and browse files
+          you've contributed to, with quick access to view and edit them.
+        </p>
+      </div>
+      <a
+        href="https://github.com/yourusername/git-file-trailblazer"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+      >
+        View on GitHub
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
+  </div>
+);
 
 const Index = () => {
   const [repoPath, setRepoPath] = useState(
@@ -194,109 +238,148 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="p-4 border-b border-border">
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Git File Explorer</h2>
-            <div className="flex gap-4">
-              <div className="flex-1 space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Repository Path
-                </label>
-                <Input
-                  placeholder="Enter repository path (e.g., /path/to/repo)"
-                  value={repoPath}
-                  onChange={(e) => setRepoPath(e.target.value)}
-                />
-              </div>
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center justify-between">
+    <div className="min-h-screen flex flex-col bg-muted/30">
+      <div className="border-b border-border/50 bg-background">
+        <div className="p-6">
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <Header />
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-2">
                   <label className="text-sm text-muted-foreground">
-                    Author Email
+                    Repository Path
                   </label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleGetGitEmail}
-                        className="h-6"
-                      >
-                        <UserRound className="h-4 w-4 mr-1" />
-                        Use Git Email
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Load email from git config</TooltipContent>
-                  </Tooltip>
+                  <Input
+                    placeholder="Enter repository path (e.g., /path/to/repo)"
+                    value={repoPath}
+                    onChange={(e) => setRepoPath(e.target.value)}
+                  />
                 </div>
-                <Input
-                  placeholder="Enter author email"
-                  value={authorEmail}
-                  onChange={(e) => setAuthorEmail(e.target.value)}
-                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-muted-foreground">
+                      Author Email
+                    </label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleGetGitEmail}
+                          className="h-6"
+                        >
+                          <UserRound className="h-4 w-4 mr-1" />
+                          Use Git Email
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Load email from git config
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    placeholder="Enter author email"
+                    value={authorEmail}
+                    onChange={(e) => setAuthorEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button type="submit">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search Files
+                </Button>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button type="submit">
-                <Search className="h-4 w-4 mr-2" />
-                Search Files
-              </Button>
+          </form>
+        </div>
+      </div>
+
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanel
+          defaultSize={25}
+          minSize={20}
+          maxSize={40}
+          className="bg-background"
+        >
+          {files.length > 0 ? (
+            <>
+              <div className="border-b border-border/50 p-2 flex justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <SortAsc className="h-4 w-4 mr-2" />
+                      Sort by
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSortBy("name")}>
+                      Name
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy("date")}>
+                      Date Modified
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="overflow-auto h-[calc(100vh-12rem)]">
+                <TreeView
+                  data={treeData}
+                  initialSelectedItemId={selectedFile}
+                  onSelectChange={handleFileSelect}
+                  className="p-2"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              No files found yet. Start by entering a repository path and author
+              email.
             </div>
-          </div>
-        </form>
-      </div>
+          )}
+        </ResizablePanel>
 
-      <div className="flex flex-1">
-        <div className="w-1/3 bg-sidebar border-r border-border overflow-auto">
-          <div className="p-2 border-b border-border flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <SortAsc className="h-4 w-4 mr-2" />
-                  Sort by
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setSortBy("name")}>
-                  Name
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSortBy("date")}>
-                  Date Modified
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <TreeView
-            data={treeData}
-            initialSelectedItemId={selectedFile}
-            onSelectChange={handleFileSelect}
-            className="py-2"
-          />
-        </div>
+        <ResizableHandle withHandle />
 
-        <div className="w-2/3 bg-background p-4">
-          <div className="flex justify-end mb-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenInEditor}
-              disabled={!selectedFile}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Editor
-            </Button>
+        <ResizablePanel defaultSize={75} className="bg-background">
+          <div className="h-full">
+            {files.length > 0 ? (
+              <>
+                {selectedFile && (
+                  <div className="border-b border-border/50 p-2 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenInEditor}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in Editor
+                    </Button>
+                  </div>
+                )}
+                <div className="relative h-[calc(100vh-12rem)]">
+                  {selectedFile ? (
+                    <CodeMirror
+                      value={fileContent}
+                      height="100%"
+                      theme={darcula}
+                      extensions={[javascript()]}
+                      className="h-full"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+                      Select a file from the tree to view its contents
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <EmptyState />
+            )}
           </div>
-          <CodeMirror
-            value={fileContent}
-            height="100%"
-            theme={darcula}
-            extensions={[javascript()]}
-            className="h-[calc(100vh-8rem)]"
-          />
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
