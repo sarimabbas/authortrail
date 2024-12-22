@@ -15,6 +15,8 @@ import {
   ExternalLink,
   UserRound,
   Search,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,7 +40,7 @@ import { getIconForFile, FolderIcon } from "../utils/fileIcons";
 interface ExtendedTreeDataItem extends TreeDataItem {
   className?: string;
   badge?: number;
-  render?: (item: ExtendedTreeDataItem) => React.ReactNode;
+  expanded?: boolean;
 }
 
 interface TreeItemContextValue {
@@ -210,6 +212,35 @@ const FileTreeIcon = ({ filename }: { filename: string }) => {
   );
 };
 
+const TreeControls = ({
+  onExpandAll,
+  onCollapseAll,
+}: {
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+}) => (
+  <div className="flex items-center gap-2">
+    <Button variant="outline" size="sm" onClick={onExpandAll} className="h-8">
+      <ChevronDown className="h-4 w-4 mr-1" />
+      Expand All
+    </Button>
+    <Button variant="outline" size="sm" onClick={onCollapseAll} className="h-8">
+      <ChevronRight className="h-4 w-4 mr-1" />
+      Collapse All
+    </Button>
+  </div>
+);
+
+// Add this near the top with other interfaces
+interface TreeViewProps {
+  data: ExtendedTreeDataItem[];
+  initialSelectedItemId?: string;
+  onSelectChange?: (item: ExtendedTreeDataItem | undefined) => void;
+  className?: string;
+  expandedIds?: Set<string>;
+  onExpandedChange?: (ids: Set<string>) => void;
+}
+
 const Index = () => {
   const [repoPath, setRepoPath] = useState(
     () => localStorage.getItem("repoPath") || ""
@@ -226,6 +257,7 @@ const Index = () => {
   const [treeData, setTreeData] = useState<ExtendedTreeDataItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -329,6 +361,24 @@ const Index = () => {
     return filterNodes(treeData);
   }, [treeData, searchQuery]);
 
+  const handleExpandAll = () => {
+    const allIds = new Set<string>();
+    const collectIds = (nodes: ExtendedTreeDataItem[]) => {
+      nodes.forEach((node) => {
+        if (node.children) {
+          allIds.add(node.id);
+          collectIds(node.children);
+        }
+      });
+    };
+    collectIds(treeData);
+    setExpandedIds(allIds);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedIds(new Set());
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <div className="border-b border-border/50 bg-background">
@@ -416,22 +466,28 @@ const Index = () => {
                     <SearchIcon className="h-4 w-4" />
                   </Button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <SortAsc className="h-4 w-4 mr-2" />
-                      Sort by
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSortBy("name")}>
-                      Name
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortBy("date")}>
-                      Date Modified
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-2">
+                  <TreeControls
+                    onExpandAll={handleExpandAll}
+                    onCollapseAll={handleCollapseAll}
+                  />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <SortAsc className="h-4 w-4 mr-2" />
+                        Sort by
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setSortBy("name")}>
+                        Name
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("date")}>
+                        Date Modified
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
               <div className="overflow-auto h-[calc(100vh-12rem)]">
                 <TreeView
@@ -439,6 +495,8 @@ const Index = () => {
                   initialSelectedItemId={selectedFile}
                   onSelectChange={handleFileSelect}
                   className="p-2"
+                  expandedIds={expandedIds}
+                  onExpandedChange={setExpandedIds}
                 />
               </div>
             </>
