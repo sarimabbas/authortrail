@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
 import { TreeView, TreeDataItem } from "@/components/ui/tree-view";
-import { File, Folder } from "lucide-react";
+import { File, Folder, SortAsc } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const createFileTree = (files: GitFile[]): TreeDataItem[] => {
   const buildNode = (
@@ -54,6 +60,32 @@ const createFileTree = (files: GitFile[]): TreeDataItem[] => {
   return root;
 };
 
+type SortType = "name" | "date";
+
+// Add a function to sort TreeDataItem nodes
+const sortTreeNodes = (
+  nodes: TreeDataItem[],
+  sortBy: SortType
+): TreeDataItem[] => {
+  return [...nodes]
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else {
+        // Extract dates from the name for files (assumes format "filename (date)")
+        const aDate = a.children ? "" : a.name.match(/\((.*?)\)$/)?.[1] || "";
+        const bDate = b.children ? "" : b.name.match(/\((.*?)\)$/)?.[1] || "";
+        return bDate.localeCompare(aDate); // Newest first
+      }
+    })
+    .map((node) => ({
+      ...node,
+      children: node.children
+        ? sortTreeNodes(node.children, sortBy)
+        : undefined,
+    }));
+};
+
 const Index = () => {
   const [repoPath, setRepoPath] = useState(
     () => localStorage.getItem("repoPath") || ""
@@ -66,6 +98,7 @@ const Index = () => {
   const [fileContent, setFileContent] = useState(
     "// Select a file to view its content"
   );
+  const [sortBy, setSortBy] = useState<SortType>("name");
   const [treeData, setTreeData] = useState<TreeDataItem[]>([]);
 
   useEffect(() => {
@@ -77,8 +110,9 @@ const Index = () => {
   }, [authorEmail]);
 
   useEffect(() => {
-    setTreeData(createFileTree(files));
-  }, [files]);
+    const tree = createFileTree(files);
+    setTreeData(sortTreeNodes(tree, sortBy));
+  }, [files, sortBy]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +161,24 @@ const Index = () => {
 
       <div className="flex flex-1">
         <div className="w-1/3 bg-sidebar border-r border-border overflow-auto">
+          <div className="p-2 border-b border-border flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  Sort by
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSortBy("name")}>
+                  Name
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortBy("date")}>
+                  Date Modified
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <TreeView
             data={treeData}
             initialSelectedItemId={selectedFile}
