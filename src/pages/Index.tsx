@@ -237,14 +237,18 @@ const Index = () => {
                     </Button>
                   </div>
                 )}
-                <div className="flex-1">
+                <div className="flex-1 overflow-auto">
                   {selectedFile ? (
                     <CodeMirror
                       value={fileContent}
                       height="100%"
                       theme={darcula}
                       extensions={[javascript()]}
-                      className="h-full"
+                      className="h-full overflow-auto"
+                      basicSetup={{
+                        lineNumbers: true,
+                        foldGutter: true,
+                      }}
                     />
                   ) : (
                     <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
