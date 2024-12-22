@@ -6,6 +6,53 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
+import { TreeView, TreeDataItem } from "@/components/ui/tree-view";
+import { File, Folder } from "lucide-react";
+
+const createFileTree = (files: GitFile[]): TreeDataItem[] => {
+  const buildNode = (
+    path: string[],
+    isFile: boolean,
+    file?: GitFile
+  ): TreeDataItem => {
+    return {
+      id: path.join("/"),
+      name: isFile
+        ? `${path[path.length - 1]} (${file?.lastModified})`
+        : path[path.length - 1],
+      icon: isFile ? File : Folder,
+      children: isFile ? undefined : [],
+    };
+  };
+
+  const root: TreeDataItem[] = [];
+  const nodeMap = new Map<string, TreeDataItem>();
+
+  files.forEach((file) => {
+    const parts = file.path.split("/");
+
+    parts.forEach((_, index) => {
+      const currentPath = parts.slice(0, index + 1);
+      const currentPathStr = currentPath.join("/");
+      const isFile = index === parts.length - 1;
+
+      if (!nodeMap.has(currentPathStr)) {
+        const node = buildNode(currentPath, isFile, isFile ? file : undefined);
+        nodeMap.set(currentPathStr, node);
+
+        if (index === 0) {
+          root.push(node);
+        } else {
+          const parentPath = parts.slice(0, index).join("/");
+          const parent = nodeMap.get(parentPath);
+          parent?.children?.push(node);
+        }
+      }
+    });
+  });
+
+  return root;
+};
 
 const Index = () => {
   const [repoPath, setRepoPath] = useState(
@@ -19,6 +66,7 @@ const Index = () => {
   const [fileContent, setFileContent] = useState(
     "// Select a file to view its content"
   );
+  const [treeData, setTreeData] = useState<TreeDataItem[]>([]);
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -27,6 +75,10 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem("authorEmail", authorEmail);
   }, [authorEmail]);
+
+  useEffect(() => {
+    setTreeData(createFileTree(files));
+  }, [files]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +92,12 @@ const Index = () => {
     }
   };
 
-  const handleFileSelect = async (filePath: string) => {
+  const handleFileSelect = async (item: TreeDataItem | undefined) => {
+    if (!item || item.children) return; // Skip if no item selected or if it's a directory
+
     try {
-      setSelectedFile(filePath);
-      const content = await getFileContent(repoPath, filePath);
+      setSelectedFile(item.id);
+      const content = await getFileContent(repoPath, item.id);
       setFileContent(content);
     } catch (error) {
       toast.error("Failed to load file content");
@@ -72,24 +126,13 @@ const Index = () => {
       </div>
 
       <div className="flex flex-1">
-        <div className="w-1/3 bg-sidebar p-4 border-r border-border overflow-auto">
-          <h2 className="text-xl font-bold mb-4">Files</h2>
-          <div className="space-y-2">
-            {files.map((file) => (
-              <div
-                key={file.path}
-                className={`p-2 hover:bg-accent rounded-md cursor-pointer ${
-                  selectedFile === file.path ? "bg-accent" : ""
-                }`}
-                onClick={() => handleFileSelect(file.path)}
-              >
-                <div className="font-medium">{file.path}</div>
-                <div className="text-sm text-muted-foreground">
-                  Last modified: {file.lastModified}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="w-1/3 bg-sidebar border-r border-border overflow-auto">
+          <TreeView
+            data={treeData}
+            initialSelectedItemId={selectedFile}
+            onSelectChange={handleFileSelect}
+            className="py-2"
+          />
         </div>
 
         <div className="w-2/3 bg-background p-4">
