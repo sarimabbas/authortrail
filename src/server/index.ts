@@ -83,9 +83,6 @@ serve({
       try {
         const { repoPath, authorEmail, branch } = await req.json();
 
-        // Add artificial delay for testing
-        await new Promise((resolve) => setTimeout(resolve, 12000));
-
         if (!repoPath || !authorEmail) {
           return new Response(
             JSON.stringify({
