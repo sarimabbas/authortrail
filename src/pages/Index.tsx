@@ -65,6 +65,8 @@ const Index = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!repoPath || !authorEmail) return;
+
     try {
       const authoredFiles = await getAuthoredFiles(repoPath, authorEmail);
       setFiles(authoredFiles);
@@ -134,9 +136,9 @@ const Index = () => {
     <div className="h-screen flex flex-col bg-muted/30">
       <div className="border-b border-border border-opacity-100 bg-background">
         <div className="p-4">
-          <form onSubmit={handleSubmit}>
+          <Header />
+          <form onSubmit={handleSubmit} id="search-form">
             <div className="space-y-4">
-              <Header />
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <Input
