@@ -32,25 +32,30 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { Search as SearchIcon } from "lucide-react";
+import { getIconForFile, FolderIcon } from "../utils/fileIcons";
 
-const createFileTree = (files: GitFile[]): TreeDataItem[] => {
+interface ExtendedTreeDataItem extends TreeDataItem {
+  className?: string;
+}
+
+const createFileTree = (files: GitFile[]): ExtendedTreeDataItem[] => {
   const buildNode = (
     path: string[],
     isFile: boolean,
     file?: GitFile
-  ): TreeDataItem => {
+  ): ExtendedTreeDataItem => {
+    const fileName = path[path.length - 1];
     return {
       id: path.join("/"),
-      name: isFile
-        ? `${path[path.length - 1]} (${file?.lastModified})`
-        : path[path.length - 1],
-      icon: isFile ? File : Folder,
+      name: isFile ? `${fileName} (${file?.lastModified})` : fileName,
+      icon: () => <FileTreeIcon filename={fileName} />,
       children: isFile ? undefined : [],
+      className: "flex items-center gap-2 py-1",
     };
   };
 
-  const root: TreeDataItem[] = [];
-  const nodeMap = new Map<string, TreeDataItem>();
+  const root: ExtendedTreeDataItem[] = [];
+  const nodeMap = new Map<string, ExtendedTreeDataItem>();
 
   files.forEach((file) => {
     const parts = file.path.split("/");
@@ -82,9 +87,9 @@ type SortType = "name" | "date";
 
 // Add a function to sort TreeDataItem nodes
 const sortTreeNodes = (
-  nodes: TreeDataItem[],
+  nodes: ExtendedTreeDataItem[],
   sortBy: SortType
-): TreeDataItem[] => {
+): ExtendedTreeDataItem[] => {
   return [...nodes]
     .sort((a, b) => {
       if (sortBy === "name") {
@@ -143,6 +148,23 @@ const Header = () => (
   </div>
 );
 
+const FileTreeIcon = ({ filename }: { filename: string }) => {
+  // Return folder icon if no extension (directory)
+  if (!filename.includes(".")) {
+    return (
+      <div className="flex items-center justify-center w-5 h-5">
+        <FolderIcon />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center w-5 h-5">
+      {getIconForFile(filename)}
+    </div>
+  );
+};
+
 const Index = () => {
   const [repoPath, setRepoPath] = useState(
     () => localStorage.getItem("repoPath") || ""
@@ -156,7 +178,7 @@ const Index = () => {
     "// Select a file to view its content"
   );
   const [sortBy, setSortBy] = useState<SortType>("name");
-  const [treeData, setTreeData] = useState<TreeDataItem[]>([]);
+  const [treeData, setTreeData] = useState<ExtendedTreeDataItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
@@ -185,7 +207,7 @@ const Index = () => {
     }
   };
 
-  const handleFileSelect = async (item: TreeDataItem | undefined) => {
+  const handleFileSelect = async (item: ExtendedTreeDataItem | undefined) => {
     if (!item || item.children) return; // Skip if no item selected or if it's a directory
 
     try {
@@ -243,7 +265,9 @@ const Index = () => {
   const filteredTreeData = useMemo(() => {
     if (!searchQuery) return treeData;
 
-    const filterNodes = (nodes: TreeDataItem[]): TreeDataItem[] => {
+    const filterNodes = (
+      nodes: ExtendedTreeDataItem[]
+    ): ExtendedTreeDataItem[] => {
       return nodes
         .map((node) => ({
           ...node,
