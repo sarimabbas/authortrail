@@ -15,7 +15,7 @@ import {
 import { javascript } from "@codemirror/lang-javascript";
 import { darcula } from "@uiw/codemirror-theme-darcula";
 import CodeMirror from "@uiw/react-codemirror";
-import { ExternalLink, File, Search, UserRound } from "lucide-react";
+import { ExternalLink, File, Search, UserRound, Loader2 } from "lucide-react";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +50,10 @@ const Index = () => {
   const [treeData, setTreeData] = useState<ExtendedTreeDataItem[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [branch, setBranch] = useState<string>("main");
+  const [isLoading, setIsLoading] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  let timerInterval: NodeJS.Timeout | null = null;
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -64,9 +68,23 @@ const Index = () => {
     setTreeData(sortTreeNodes(tree, sortBy));
   }, [files, sortBy]);
 
+  useEffect(() => {
+    return () => {
+      if (timerInterval) clearInterval(timerInterval);
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!repoPath || !authorEmail) return;
+
+    setIsLoading(true);
+    setElapsedTime(0);
+    setStartTime(Date.now());
+
+    timerInterval = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000);
 
     try {
       const authoredFiles = await getAuthoredFiles(
@@ -75,10 +93,25 @@ const Index = () => {
         branch
       );
       setFiles(authoredFiles);
-      toast.success(`Found ${authoredFiles.length} files`);
+
+      const endTime = Date.now();
+      const totalMs = endTime - (startTime || endTime);
+      const timeMessage =
+        elapsedTime === 0
+          ? `${totalMs}ms`
+          : `${elapsedTime} ${elapsedTime === 1 ? "second" : "seconds"}`;
+
+      toast.success(`Found ${authoredFiles.length} files in ${timeMessage}`);
     } catch (error) {
       toast.error("Failed to get file history");
       console.error(error);
+    } finally {
+      setIsLoading(false);
+      setStartTime(null);
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
     }
   };
 
@@ -184,9 +217,18 @@ const Index = () => {
                     onChange={(e) => setBranch(e.target.value)}
                   />
                 </div>
-                <Button type="submit">
-                  <Search className="h-4 w-4 mr-2" />
-                  Search Files
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Searching... ({elapsedTime}s)
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Search Files
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
