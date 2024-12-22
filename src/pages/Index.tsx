@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { darcula } from "@uiw/codemirror-theme-darcula";
@@ -31,6 +31,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { Search as SearchIcon } from "lucide-react";
 
 const createFileTree = (files: GitFile[]): TreeDataItem[] => {
   const buildNode = (
@@ -156,6 +157,8 @@ const Index = () => {
   );
   const [sortBy, setSortBy] = useState<SortType>("name");
   const [treeData, setTreeData] = useState<TreeDataItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -237,6 +240,26 @@ const Index = () => {
     }
   };
 
+  const filteredTreeData = useMemo(() => {
+    if (!searchQuery) return treeData;
+
+    const filterNodes = (nodes: TreeDataItem[]): TreeDataItem[] => {
+      return nodes
+        .map((node) => ({
+          ...node,
+          children: node.children ? filterNodes(node.children) : undefined,
+        }))
+        .filter((node) => {
+          const matchesSearch = node.name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase());
+          return matchesSearch || (node.children && node.children.length > 0);
+        });
+    };
+
+    return filterNodes(treeData);
+  }, [treeData, searchQuery]);
+
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <div className="border-b border-border/50 bg-background">
@@ -305,7 +328,25 @@ const Index = () => {
         >
           {files.length > 0 ? (
             <>
-              <div className="border-b border-border/50 p-2 flex justify-end">
+              <div className="border-b border-border/50 p-2 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  {showSearch && (
+                    <Input
+                      placeholder="Search files..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-8 w-[200px]"
+                    />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSearch(!showSearch)}
+                    className="h-8"
+                  >
+                    <SearchIcon className="h-4 w-4" />
+                  </Button>
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -325,7 +366,7 @@ const Index = () => {
               </div>
               <div className="overflow-auto h-[calc(100vh-12rem)]">
                 <TreeView
-                  data={treeData}
+                  data={filteredTreeData}
                   initialSelectedItemId={selectedFile}
                   onSelectChange={handleFileSelect}
                   className="p-2"
