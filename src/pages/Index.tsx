@@ -49,6 +49,7 @@ const Index = () => {
   const [sortBy, setSortBy] = useState<SortType>("name");
   const [treeData, setTreeData] = useState<ExtendedTreeDataItem[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [branch, setBranch] = useState<string>("main");
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -68,7 +69,11 @@ const Index = () => {
     if (!repoPath || !authorEmail) return;
 
     try {
-      const authoredFiles = await getAuthoredFiles(repoPath, authorEmail);
+      const authoredFiles = await getAuthoredFiles(
+        repoPath,
+        authorEmail,
+        branch
+      );
       setFiles(authoredFiles);
       toast.success(`Found ${authoredFiles.length} files`);
     } catch (error) {
@@ -135,8 +140,8 @@ const Index = () => {
   return (
     <div className="h-screen flex flex-col bg-muted/30">
       <div className="border-b border-border border-opacity-100 bg-background">
-        <div className="p-4">
-          <Header />
+        <Header />
+        <div className="px-4 pb-4 pt-4">
           <form onSubmit={handleSubmit} id="search-form">
             <div className="space-y-4">
               <div className="flex items-center gap-4">
@@ -171,6 +176,13 @@ const Index = () => {
                       </TooltipContent>
                     </Tooltip>
                   </div>
+                </div>
+                <div className="flex-1">
+                  <Input
+                    placeholder="Enter branch name (optional)"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                  />
                 </div>
                 <Button type="submit">
                   <Search className="h-4 w-4 mr-2" />

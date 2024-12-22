@@ -81,7 +81,7 @@ serve({
 
     if (url.pathname === "/api/git/files" && req.method === "POST") {
       try {
-        const { repoPath, authorEmail } = await req.json();
+        const { repoPath, authorEmail, branch } = await req.json();
 
         if (!repoPath || !authorEmail) {
           return new Response(
@@ -153,9 +153,10 @@ serve({
           );
         }
 
-        // Get all files that have been modified by the author
+        // Modify the git command to use specified branch or default to --all
+        const branchArg = branch ? `${branch}` : "--all";
         const filesResult =
-          await $`git log --all --pretty=format: --author="${authorEmail}" --name-only | sort -u`
+          await $`git log ${branchArg} --pretty=format: --author="${authorEmail}" --name-only --diff-filter=ACMRT | sort -u`
             .cwd(absolutePath)
             .quiet();
 
@@ -170,10 +171,23 @@ serve({
           .trim()
           .split("\n")
           .filter(Boolean);
+        const existingFiles = [];
+
+        // Verify each file exists in HEAD
+        for (const file of files) {
+          const fileExistsCheck = await $`git cat-file -e HEAD:"${file}"`
+            .cwd(absolutePath)
+            .quiet();
+
+          if (fileExistsCheck.exitCode === 0) {
+            existingFiles.push(file);
+          }
+        }
+
         const fileDetails = [];
 
-        // Get blame info for each file
-        for (const file of files) {
+        // Update the loop to use existingFiles instead of files
+        for (const file of existingFiles) {
           const lastModifiedResult =
             await $`git log -1 --format="%ad" -- "${file}"`
               .cwd(absolutePath)

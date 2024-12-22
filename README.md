@@ -1,6 +1,8 @@
-# AuthorTrail
+# 🤖 AuthorTrail
 
-Track and explore your Git contributions with ease. AuthorTrail helps developers visualize their authored files across Git repositories, making it simple to review and access your code contributions.
+AuthorTrail helps you explore your Git repository's history by author. Find and browse files you've contributed to, with quick access to view and edit them.
+
+![AuthorTrail Screenshot](public/og-image.png)
 
 ## Features
 

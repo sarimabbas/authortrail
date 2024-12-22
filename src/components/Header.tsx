@@ -1,4 +1,4 @@
-import { File, ExternalLink, Moon, Sun } from "lucide-react";
+import { ExternalLink, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -15,12 +15,14 @@ export const Header = () => {
   };
 
   return (
-    <div className="border-b border-border border-opacity-100 pb-6">
+    <div className="border-b border-border border-opacity-100 p-4">
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <File className="h-5 w-5 text-primary" />
+            <div className="bg-primary/10 rounded-full p-2 w-12 h-12 flex items-center justify-center">
+              <span className="text-2xl" role="img" aria-label="fox">
+                🦊
+              </span>
             </div>
             <h1 className="text-xl font-semibold">AuthorTrail</h1>
           </div>
@@ -49,7 +51,7 @@ export const Header = () => {
             </TooltipContent>
           </Tooltip>
           <a
-            href="https://github.com/yourusername/authortrail"
+            href="https://github.com/sarimabbas/authortrail"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"

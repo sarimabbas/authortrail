@@ -4,43 +4,52 @@ export interface GitFile {
   lastModified: string;
 }
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = "http://localhost:3000/api";
 
-export const getAuthoredFiles = async (repoPath: string, authorEmail: string): Promise<GitFile[]> => {
+export const getAuthoredFiles = async (
+  repoPath: string,
+  authorEmail: string,
+  branch?: string
+): Promise<GitFile[]> => {
   try {
     const response = await fetch(`${API_URL}/git/files`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ repoPath, authorEmail }),
+      body: JSON.stringify({ repoPath, authorEmail, branch }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch files');
+      throw new Error("Failed to fetch files");
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error getting authored files:', error);
+    console.error("Error getting authored files:", error);
     throw error;
   }
 };
 
-export const getFileContent = async (repoPath: string, filePath: string): Promise<string> => {
+export const getFileContent = async (
+  repoPath: string,
+  filePath: string
+): Promise<string> => {
   try {
     const response = await fetch(
-      `${API_URL}/git/content?repoPath=${encodeURIComponent(repoPath)}&filePath=${encodeURIComponent(filePath)}`
+      `${API_URL}/git/content?repoPath=${encodeURIComponent(
+        repoPath
+      )}&filePath=${encodeURIComponent(filePath)}`
     );
 
     if (!response.ok) {
-      throw new Error('Failed to fetch file content');
+      throw new Error("Failed to fetch file content");
     }
 
     const data = await response.json();
     return data.content;
   } catch (error) {
-    console.error('Error getting file content:', error);
+    console.error("Error getting file content:", error);
     throw error;
   }
 };
