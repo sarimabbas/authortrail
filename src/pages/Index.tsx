@@ -28,12 +28,27 @@ const Index = () => {
   };
 
   const handleDirectorySelect = async () => {
+    // Check if the File System Access API is supported
+    if (!('showDirectoryPicker' in window)) {
+      toast.error(
+        'Your browser does not support directory selection. Please use Chrome, Edge, or another browser that supports the File System Access API.',
+        {
+          duration: 5000,
+        }
+      );
+      return;
+    }
+
     try {
       // @ts-ignore - showDirectoryPicker is not in TypeScript's DOM types yet
       const dirHandle = await window.showDirectoryPicker();
       setRepoPath(dirHandle.name);
       toast.success('Directory selected');
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // User cancelled the selection
+        return;
+      }
       toast.error('Failed to select directory');
       console.error(error);
     }
