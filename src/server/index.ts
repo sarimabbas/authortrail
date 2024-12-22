@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { spawn } from "bun";
+import { $ } from "bun";
 
 // Define CORS headers
 const corsHeaders = {
@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+// Configure shell to not throw by default for better error handling
+$.nothrow();
 
 // Define the server
 serve({
@@ -40,11 +43,13 @@ serve({
         }
 
         // Verify if git is installed
-        const gitVersionProc = spawn(["git", "--version"]);
-        await gitVersionProc.exited;
-        if (gitVersionProc.exitCode !== 0) {
+        const gitCheck = await $`git --version`.quiet();
+        if (gitCheck.exitCode !== 0) {
           return new Response(
-            JSON.stringify({ error: "Git is not installed on the system" }),
+            JSON.stringify({
+              error: "Git is not installed on the system",
+              details: gitCheck.stderr.toString(),
+            }),
             {
               status: 500,
               headers: {
@@ -56,13 +61,13 @@ serve({
         }
 
         // Verify if the path exists and is a git repository
-        const gitStatusProc = spawn(["git", "status"], { cwd: repoPath });
-        await gitStatusProc.exited;
-        if (gitStatusProc.exitCode !== 0) {
+        const repoCheck = await $`git status`.cwd(repoPath).quiet();
+        if (repoCheck.exitCode !== 0) {
           return new Response(
             JSON.stringify({
               error:
                 "Invalid git repository path. Please ensure the path exists and contains a git repository.",
+              details: repoCheck.stderr.toString(),
             }),
             {
               status: 400,
@@ -75,38 +80,40 @@ serve({
         }
 
         // Get all files that have been modified by the author
-        const gitLogProc = spawn(
-          [
-            "git",
-            "log",
-            "--all",
-            "--pretty=format:",
-            `--author="${authorEmail}"`,
-            "--name-only",
-            "|",
-            "sort",
-            "-u",
-          ],
-          { cwd: repoPath }
-        );
+        const filesResult =
+          await $`git log --all --pretty=format: --author="${authorEmail}" --name-only | sort -u`
+            .cwd(repoPath)
+            .quiet();
 
-        const stdout = await new Response(gitLogProc.stdout).text();
-        const files = stdout.trim().split("\n").filter(Boolean);
+        if (filesResult.exitCode !== 0) {
+          throw new Error(
+            `Failed to get file list: ${filesResult.stderr.toString()}`
+          );
+        }
+
+        const files = filesResult.stdout
+          .toString()
+          .trim()
+          .split("\n")
+          .filter(Boolean);
         const fileDetails = [];
 
         // Get blame info for each file
         for (const file of files) {
-          const gitLogFileProc = spawn(
-            ["git", "log", "-1", `--format="%ad"`, `-- "${file}"`],
-            { cwd: repoPath }
-          );
+          const lastModifiedResult =
+            await $`git log -1 --format="%ad" -- "${file}"`
+              .cwd(repoPath)
+              .quiet();
 
-          const lastModified = await new Response(gitLogFileProc.stdout).text();
-          fileDetails.push({
-            path: file,
-            author: authorEmail,
-            lastModified: new Date(lastModified).toLocaleDateString(),
-          });
+          if (lastModifiedResult.exitCode === 0) {
+            fileDetails.push({
+              path: file,
+              author: authorEmail,
+              lastModified: new Date(
+                lastModifiedResult.stdout.toString().trim()
+              ).toLocaleDateString(),
+            });
+          }
         }
 
         return new Response(JSON.stringify(fileDetails), {
@@ -121,6 +128,7 @@ serve({
           JSON.stringify({
             error:
               "Failed to get file history. Please ensure git is installed and the repository path is correct.",
+            details: error instanceof Error ? error.message : String(error),
           }),
           {
             status: 500,
@@ -147,19 +155,40 @@ serve({
           });
         }
 
-        const catProc = spawn(["cat", filePath], { cwd: repoPath });
-        const stdout = await new Response(catProc.stdout).text();
+        const contentResult = await $`cat "${filePath}"`.cwd(repoPath).quiet();
 
-        return new Response(JSON.stringify({ content: stdout }), {
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        });
+        if (contentResult.exitCode !== 0) {
+          return new Response(
+            JSON.stringify({
+              error: "Failed to read file content",
+              details: contentResult.stderr.toString(),
+            }),
+            {
+              status: 500,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ content: contentResult.stdout.toString() }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
       } catch (error) {
         console.error("Error getting file content:", error);
         return new Response(
-          JSON.stringify({ error: "Failed to get file content" }),
+          JSON.stringify({
+            error: "Failed to get file content",
+            details: error instanceof Error ? error.message : String(error),
+          }),
           {
             status: 500,
             headers: {
