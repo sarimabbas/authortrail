@@ -2,12 +2,18 @@ import { TreeDataItem } from "@/components/ui/tree-view";
 
 export interface ExtendedTreeDataItem extends TreeDataItem {
   className?: string;
-  badge?: number;
+  metadata?: {
+    date?: string;
+    count?: number;
+  };
   expanded?: boolean;
 }
 
 export interface TreeItemContextValue {
-  badge?: number;
+  metadata?: {
+    date?: string;
+    count?: number;
+  };
 }
 
 export type SortType = "name" | "date";

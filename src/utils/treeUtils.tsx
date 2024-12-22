@@ -1,6 +1,7 @@
 import { ExtendedTreeDataItem } from "../types/tree";
 import { GitFile } from "./gitUtils";
 import { FileTreeIcon } from "../components/FileTreeIcon";
+import { Badge } from "@/components/ui/badge";
 
 export const createFileTree = (files: GitFile[]): ExtendedTreeDataItem[] => {
   const root: ExtendedTreeDataItem[] = [];
@@ -53,11 +54,7 @@ const buildNode = (
   childCount?: number
 ): ExtendedTreeDataItem => {
   const fileName = path[path.length - 1];
-  const displayName = isFile
-    ? `${fileName} (${file?.lastModified})`
-    : childCount !== undefined
-    ? `${fileName} (${childCount})`
-    : fileName;
+  const displayName = fileName;
 
   return {
     id: path.join("/"),
@@ -65,6 +62,15 @@ const buildNode = (
     icon: () => <FileTreeIcon filename={fileName} />,
     children: isFile ? undefined : [],
     className: "flex items-center gap-2 py-1",
+    metadata: isFile
+      ? {
+          date: file?.lastModified,
+          count: undefined,
+        }
+      : {
+          date: undefined,
+          count: childCount,
+        },
   };
 };
 
@@ -77,8 +83,8 @@ export const sortTreeNodes = (
       if (sortBy === "name") {
         return a.name.localeCompare(b.name);
       } else {
-        const aDate = a.children ? "" : a.name.match(/\((.*?)\)$/)?.[1] || "";
-        const bDate = b.children ? "" : b.name.match(/\((.*?)\)$/)?.[1] || "";
+        const aDate = a.metadata?.date || "";
+        const bDate = b.metadata?.date || "";
         return bDate.localeCompare(aDate);
       }
     })
