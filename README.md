@@ -4,6 +4,8 @@ AuthorTrail helps you explore your Git repository's history by author. Find and 
 
 ![AuthorTrail Screenshot](public/og-image.png)
 
+> **Note**: A majority of the code in this repository was generated with [Lovable](https://lovable.dev) and [Cursor](https://cursor.so) using the Claude 3.5 Sonnet LLM.
+
 ## Features
 
 - 🔍 Search files by author email
@@ -78,7 +80,7 @@ The project structure is organized as follows:
 
 ```
 src/
-  ├── components/     # React components
+  ├── components/    # React components
   ├── pages/         # Page components
   ├── server/        # Backend server code
   ├── types/         # TypeScript types
