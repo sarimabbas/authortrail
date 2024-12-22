@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles } from '../utils/gitUtils';
+import { FolderOpen } from 'lucide-react';
 
 const Index = () => {
   const [repoPath, setRepoPath] = useState('');
@@ -26,16 +27,39 @@ const Index = () => {
     }
   };
 
+  const handleDirectorySelect = async () => {
+    try {
+      // @ts-ignore - showDirectoryPicker is not in TypeScript's DOM types yet
+      const dirHandle = await window.showDirectoryPicker();
+      setRepoPath(dirHandle.name);
+      toast.success('Directory selected');
+    } catch (error) {
+      toast.error('Failed to select directory');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-4 border-b border-border">
         <form onSubmit={handleSubmit} className="flex gap-4">
-          <Input
-            placeholder="Repository path"
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
-            className="flex-1"
-          />
+          <div className="flex-1 flex gap-2">
+            <Input
+              placeholder="Repository path"
+              value={repoPath}
+              onChange={(e) => setRepoPath(e.target.value)}
+              className="flex-1"
+            />
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleDirectorySelect}
+              className="flex items-center gap-2"
+            >
+              <FolderOpen className="w-4 h-4" />
+              Browse
+            </Button>
+          </div>
           <Input
             placeholder="Author email"
             value={authorEmail}
