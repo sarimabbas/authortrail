@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -10,7 +10,7 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/git/files', async (req, res) => {
+app.post('/api/git/files', async (req: Request, res: Response) => {
   try {
     const { repoPath, authorEmail } = req.body;
     
@@ -44,7 +44,7 @@ app.post('/api/git/files', async (req, res) => {
   }
 });
 
-app.get('/api/git/content', async (req, res) => {
+app.get('/api/git/content', async (req: Request, res: Response) => {
   try {
     const { repoPath, filePath } = req.query;
     
