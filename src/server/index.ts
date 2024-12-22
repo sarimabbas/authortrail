@@ -338,6 +338,40 @@ serve({
       }
     }
 
+    if (url.pathname === "/api/git/user-email" && req.method === "GET") {
+      try {
+        const emailResult = await $`git config --global user.email`.quiet();
+
+        if (emailResult.exitCode !== 0) {
+          throw new Error(emailResult.stderr.toString());
+        }
+
+        const email = emailResult.stdout.toString().trim();
+
+        return new Response(JSON.stringify({ email }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        console.error("Error getting git email:", error);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to get git email",
+            details: error instanceof Error ? error.message : String(error),
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+    }
+
     return new Response("404!", {
       status: 404,
       headers: corsHeaders,

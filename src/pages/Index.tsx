@@ -7,13 +7,25 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
 import { TreeView, TreeDataItem } from "@/components/ui/tree-view";
-import { File, Folder, SortAsc, ExternalLink } from "lucide-react";
+import {
+  File,
+  Folder,
+  SortAsc,
+  ExternalLink,
+  UserRound,
+  Search,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const createFileTree = (files: GitFile[]): TreeDataItem[] => {
   const buildNode = (
@@ -164,23 +176,75 @@ const Index = () => {
     }
   };
 
+  const handleGetGitEmail = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/git/user-email");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || "Failed to get git email");
+      }
+
+      const { email } = await response.json();
+      setAuthorEmail(email);
+      toast.success("Git email loaded");
+    } catch (error) {
+      toast.error("Failed to get git email");
+      console.error(error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-4 border-b border-border">
-        <form onSubmit={handleSubmit} className="flex gap-4">
-          <Input
-            placeholder="Repository path (e.g., /path/to/repo)"
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
-            className="flex-1"
-          />
-          <Input
-            placeholder="Author email"
-            value={authorEmail}
-            onChange={(e) => setAuthorEmail(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit">Get Files</Button>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Git File Explorer</h2>
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-2">
+                <label className="text-sm text-muted-foreground">
+                  Repository Path
+                </label>
+                <Input
+                  placeholder="Enter repository path (e.g., /path/to/repo)"
+                  value={repoPath}
+                  onChange={(e) => setRepoPath(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm text-muted-foreground">
+                    Author Email
+                  </label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleGetGitEmail}
+                        className="h-6"
+                      >
+                        <UserRound className="h-4 w-4 mr-1" />
+                        Use Git Email
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Load email from git config</TooltipContent>
+                  </Tooltip>
+                </div>
+                <Input
+                  placeholder="Enter author email"
+                  value={authorEmail}
+                  onChange={(e) => setAuthorEmail(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit">
+                <Search className="h-4 w-4 mr-2" />
+                Search Files
+              </Button>
+            </div>
+          </div>
         </form>
       </div>
 
