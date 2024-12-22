@@ -17,7 +17,7 @@ import { darcula } from "@uiw/codemirror-theme-darcula";
 import CodeMirror from "@uiw/react-codemirror";
 import { ExternalLink, File, Search, UserRound, Loader2 } from "lucide-react";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { ExtendedTreeDataItem, SortType } from "../types/tree";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
@@ -52,8 +52,8 @@ const Index = () => {
   const [branch, setBranch] = useState<string>("main");
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
-  let timerInterval: NodeJS.Timeout | null = null;
+  const startTimeRef = useRef<number | null>(null);
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
 
   useEffect(() => {
     localStorage.setItem("repoPath", repoPath);
@@ -80,7 +80,7 @@ const Index = () => {
 
     setIsLoading(true);
     setElapsedTime(0);
-    setStartTime(Date.now());
+    startTimeRef.current = Date.now();
 
     timerInterval = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
@@ -93,10 +93,13 @@ const Index = () => {
         branch
       );
 
+      const seconds = Math.floor(
+        (Date.now() - (startTimeRef.current || Date.now())) / 1000
+      );
       const timeMessage =
-        elapsedTime === 0
+        seconds === 0
           ? "less than a second"
-          : `${elapsedTime} ${elapsedTime === 1 ? "second" : "seconds"}`;
+          : `${seconds} ${seconds === 1 ? "second" : "seconds"}`;
 
       setFiles(authoredFiles);
       toast.success(`Found ${authoredFiles.length} files in ${timeMessage}`);
@@ -105,6 +108,7 @@ const Index = () => {
       console.error(error);
     } finally {
       setIsLoading(false);
+      startTimeRef.current = null;
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
