@@ -294,6 +294,50 @@ serve({
       }
     }
 
+    if (url.pathname === "/api/editor" && req.method === "POST") {
+      try {
+        const { filePath } = await req.json();
+
+        // Get user's editor from git config
+        const editorResult = await $`git config --global core.editor`.quiet();
+        let editor = editorResult.stdout.toString().trim() || "code"; // Default to VS Code if not set
+
+        // Remove --wait flag if it's VS Code
+        if (editor.startsWith("code")) {
+          editor = "code";
+        }
+
+        // Open file in editor
+        const openResult = await $`${editor} "${filePath}"`.quiet();
+
+        if (openResult.exitCode !== 0) {
+          throw new Error(openResult.stderr.toString());
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        console.error("Error opening editor:", error);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to open editor",
+            details: error instanceof Error ? error.message : String(error),
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+    }
+
     return new Response("404!", {
       status: 404,
       headers: corsHeaders,

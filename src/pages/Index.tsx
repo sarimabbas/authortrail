@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
 import { TreeView, TreeDataItem } from "@/components/ui/tree-view";
-import { File, Folder, SortAsc } from "lucide-react";
+import { File, Folder, SortAsc, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,6 +139,31 @@ const Index = () => {
     }
   };
 
+  const handleOpenInEditor = async () => {
+    if (!selectedFile || !repoPath) return;
+
+    try {
+      const absolutePath = `${repoPath}/${selectedFile}`;
+      const response = await fetch("http://localhost:3000/api/editor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filePath: absolutePath }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || "Failed to open editor");
+      }
+
+      toast.success("Opening file in editor");
+    } catch (error) {
+      toast.error("Failed to open editor");
+      console.error(error);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-4 border-b border-border">
@@ -188,6 +213,17 @@ const Index = () => {
         </div>
 
         <div className="w-2/3 bg-background p-4">
+          <div className="flex justify-end mb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenInEditor}
+              disabled={!selectedFile}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in Editor
+            </Button>
+          </div>
           <CodeMirror
             value={fileContent}
             height="100%"
