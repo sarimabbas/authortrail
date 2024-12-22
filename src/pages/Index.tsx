@@ -131,39 +131,37 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <div className="border-b border-border/50 bg-background">
-        <div className="p-6">
+    <div className="h-screen flex flex-col bg-muted/30">
+      <div className="border-b border-border border-opacity-100 bg-background">
+        <div className="p-4">
           <form onSubmit={handleSubmit}>
-            <div className="space-y-6">
+            <div className="space-y-4">
               <Header />
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-2">
-                  <label className="text-sm text-muted-foreground">
-                    Repository Path
-                  </label>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
                   <Input
                     placeholder="Enter repository path (e.g., /path/to/repo)"
                     value={repoPath}
                     onChange={(e) => setRepoPath(e.target.value)}
                   />
                 </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm text-muted-foreground">
-                      Author Email
-                    </label>
+                <div className="flex-1">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter author email"
+                      value={authorEmail}
+                      onChange={(e) => setAuthorEmail(e.target.value)}
+                      className="flex-1"
+                    />
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="sm"
+                          variant="outline"
+                          size="icon"
                           onClick={handleGetGitEmail}
-                          className="h-6"
                         >
-                          <UserRound className="h-4 w-4 mr-1" />
-                          Use Git Email
+                          <UserRound className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -171,14 +169,7 @@ const Index = () => {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <Input
-                    placeholder="Enter author email"
-                    value={authorEmail}
-                    onChange={(e) => setAuthorEmail(e.target.value)}
-                  />
                 </div>
-              </div>
-              <div className="flex justify-end pt-2">
                 <Button type="submit">
                   <Search className="h-4 w-4 mr-2" />
                   Search Files
@@ -217,11 +208,11 @@ const Index = () => {
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize={75} className="bg-background">
-          <div className="h-full">
+          <div className="h-full flex flex-col">
             {files.length > 0 ? (
               <>
                 {selectedFile && (
-                  <div className="border-b border-border/50 p-2 flex justify-end">
+                  <div className="border-b border-border border-opacity-100 p-2 flex justify-end">
                     <Button
                       variant="outline"
                       size="sm"
@@ -232,7 +223,7 @@ const Index = () => {
                     </Button>
                   </div>
                 )}
-                <div className="relative h-[calc(100vh-12rem)]">
+                <div className="flex-1">
                   {selectedFile ? (
                     <CodeMirror
                       value={fileContent}
@@ -242,7 +233,7 @@ const Index = () => {
                       className="h-full"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+                    <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                       Select a file from the tree to view its contents
                     </div>
                   )}

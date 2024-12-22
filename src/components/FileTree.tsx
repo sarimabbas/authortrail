@@ -37,6 +37,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
 }) => {
   const [showSearch, setShowSearch] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const filteredTreeData = React.useMemo(() => {
     if (!searchQuery) return treeData;
@@ -60,71 +61,65 @@ export const FileTree: React.FC<FileTreeProps> = ({
     return filterNodes(treeData);
   }, [treeData, searchQuery]);
 
-  const handleExpandAll = () => {
-    const allIds = new Set<string>();
-    const collectIds = (nodes: ExtendedTreeDataItem[]) => {
-      nodes.forEach((node) => {
-        if (node.children) {
-          allIds.add(node.id);
-          collectIds(node.children);
-        }
-      });
-    };
-    collectIds(treeData);
-    onExpandedChange(allIds);
-  };
-
-  const handleCollapseAll = () => {
-    onExpandedChange(new Set());
+  const handleExpandToggle = () => {
+    if (isExpanded) {
+      onExpandedChange(new Set());
+    } else {
+      const allIds = new Set<string>();
+      const collectIds = (nodes: ExtendedTreeDataItem[]) => {
+        nodes.forEach((node) => {
+          if (node.children) {
+            allIds.add(node.id);
+            collectIds(node.children);
+          }
+        });
+      };
+      collectIds(treeData);
+      onExpandedChange(allIds);
+    }
+    setIsExpanded(!isExpanded);
   };
 
   return (
-    <>
-      <div className="border-b border-border/50 p-2 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          {showSearch && (
-            <Input
-              placeholder="Search files..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-[200px]"
-            />
-          )}
+    <div className="h-full flex flex-col">
+      <div className="border-b border-border border-opacity-100 p-2 flex flex-wrap gap-2">
+        <div className="flex items-center gap-2 min-w-[40px]">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setShowSearch(!showSearch)}
-            className="h-8"
+            className="h-8 w-8"
           >
             <SearchIcon className="h-4 w-4" />
           </Button>
+          {showSearch && (
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 w-[150px]"
+            />
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExpandAll}
-              className="h-8"
-            >
-              <ChevronDown className="h-4 w-4 mr-1" />
-              Expand All
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCollapseAll}
-              className="h-8"
-            >
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExpandToggle}
+            className="h-8"
+          >
+            {isExpanded ? (
               <ChevronRight className="h-4 w-4 mr-1" />
-              Collapse All
-            </Button>
-          </div>
+            ) : (
+              <ChevronDown className="h-4 w-4 mr-1" />
+            )}
+            {isExpanded ? "Collapse" : "Expand"}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <SortAsc className="h-4 w-4 mr-2" />
-                Sort by
+              <Button variant="outline" size="sm" className="h-8">
+                <SortAsc className="h-4 w-4 mr-1" />
+                Sort
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -138,7 +133,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
           </DropdownMenu>
         </div>
       </div>
-      <div className="overflow-auto h-[calc(100vh-12rem)]">
+      <div className="flex-1 overflow-auto">
         <TreeView
           data={filteredTreeData}
           initialSelectedItemId={selectedFile}
@@ -148,6 +143,6 @@ export const FileTree: React.FC<FileTreeProps> = ({
           onExpandedChange={onExpandedChange}
         />
       </div>
-    </>
+    </div>
   );
 };
