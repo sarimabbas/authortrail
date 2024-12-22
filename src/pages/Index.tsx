@@ -92,7 +92,6 @@ const Index = () => {
         authorEmail,
         branch
       );
-      setFiles(authoredFiles);
 
       const endTime = Date.now();
       const totalMs = endTime - (startTime || endTime);
@@ -101,6 +100,7 @@ const Index = () => {
           ? `${totalMs}ms`
           : `${elapsedTime} ${elapsedTime === 1 ? "second" : "seconds"}`;
 
+      setFiles(authoredFiles);
       toast.success(`Found ${authoredFiles.length} files in ${timeMessage}`);
     } catch (error) {
       toast.error("Failed to get file history");
