@@ -97,7 +97,7 @@ const Index = () => {
       const endTime = Date.now();
       const totalMs = endTime - (startTime || endTime);
       const timeMessage =
-        elapsedTime === 0
+        totalMs < 1000
           ? `${totalMs}ms`
           : `${elapsedTime} ${elapsedTime === 1 ? "second" : "seconds"}`;
 
