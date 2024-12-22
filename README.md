@@ -1,69 +1,96 @@
-# Welcome to your Lovable project
+# AuthorTrail
 
-## Project info
+Track and explore your Git contributions with ease. AuthorTrail helps developers visualize their authored files across Git repositories, making it simple to review and access your code contributions.
 
-**URL**: https://lovable.dev/projects/cf8e832b-8b68-4b9c-a900-1a0453afe3e8
+## Features
 
-## How can I edit this code?
+- 🔍 Search files by author email
+- 📁 Hierarchical file tree visualization
+- 📝 Built-in code viewer with syntax highlighting
+- 🔗 Quick open in your default editor
+- 🎨 Dark mode support
 
-There are several ways of editing your application.
+## Prerequisites
 
-**Use Lovable**
+You'll need to install Bun first:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cf8e832b-8b68-4b9c-a900-1a0453afe3e8) and start prompting.
+**macOS, Linux, WSL:**
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+curl -fsSL https://bun.sh/install | bash
 ```
 
-**Edit a file directly in GitHub**
+**Windows (requires Windows 10 version 1809 or later):**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```powershell
+powershell -c "irm bun.sh/install.ps1|iex"
+```
 
-**Use GitHub Codespaces**
+## Getting Started
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Clone the repository:
 
-## What technologies are used for this project?
+```bash
+git clone https://github.com/yourusername/authortrail.git
+cd authortrail
+```
 
-This project is built with .
+2. Install dependencies:
 
-- Vite
+```bash
+bun install
+```
+
+3. Start the development server:
+
+```bash
+bun run dev
+```
+
+4. Start the backend server:
+
+```bash
+bun run server
+```
+
+## How to Use
+
+1. Enter the path to your Git repository (e.g., `/path/to/your/repo`)
+2. Input your Git email or click the user icon to auto-fetch from Git config
+3. Click "Search Files" to find all files you've authored
+4. Navigate the file tree to view your contributions
+5. Use the "Open in Editor" button to edit files in your preferred IDE
+
+## Tech Stack
+
+- Vite + React
 - TypeScript
-- React
-- shadcn-ui
+- shadcn/ui components
 - Tailwind CSS
+- CodeMirror for code viewing
+- Bun for both package management and server runtime
 
-## How can I deploy this project?
+## Development
 
-Simply open [Lovable](https://lovable.dev/projects/cf8e832b-8b68-4b9c-a900-1a0453afe3e8) and click on Share -> Publish.
+The project structure is organized as follows:
 
-## I want to use a custom domain - is that possible?
+```
+src/
+  ├── components/     # React components
+  ├── pages/         # Page components
+  ├── server/        # Backend server code
+  ├── types/         # TypeScript types
+  └── utils/         # Utility functions
+```
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
