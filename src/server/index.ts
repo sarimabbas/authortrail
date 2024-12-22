@@ -98,8 +98,9 @@ serve({
           );
         }
 
-        // Validate repository path
         const absolutePath = resolve(repoPath);
+
+        // Validate repository path
         if (!existsSync(absolutePath)) {
           return new Response(
             JSON.stringify({
@@ -153,12 +154,17 @@ serve({
           );
         }
 
-        // Modify the git command to use specified branch or default to --all
+        // Use a single optimized git command to get files and their latest commit dates
         const branchArg = branch ? `${branch}` : "--all";
-        const filesResult =
-          await $`git log ${branchArg} --pretty=format: --author="${authorEmail}" --name-only --diff-filter=ACMRT | sort -u`
-            .cwd(absolutePath)
-            .quiet();
+        const filesResult = await $`git log ${branchArg} \
+          --author="${authorEmail}" \
+          --pretty="format:%ad%x09%H" \
+          --date=short \
+          --name-only \
+          --diff-filter=ACMRT \
+          | awk 'NF==2 {d=$1; h=$2; next} NF==1 && $1!="" {print d "\t" $1}'`
+          .cwd(absolutePath)
+          .quiet();
 
         if (filesResult.exitCode !== 0) {
           throw new Error(
@@ -166,41 +172,33 @@ serve({
           );
         }
 
-        const files = filesResult.stdout
+        // Process the results
+        const fileMap = new Map();
+        const lines = filesResult.stdout
           .toString()
           .trim()
           .split("\n")
           .filter(Boolean);
-        const existingFiles = [];
 
-        // Verify each file exists in HEAD
-        for (const file of files) {
-          const fileExistsCheck = await $`git cat-file -e HEAD:"${file}"`
-            .cwd(absolutePath)
-            .quiet();
-
-          if (fileExistsCheck.exitCode === 0) {
-            existingFiles.push(file);
+        for (const line of lines) {
+          const [date, file] = line.split("\t");
+          if (!fileMap.has(file)) {
+            fileMap.set(file, {
+              path: file,
+              author: authorEmail,
+              lastModified: new Date(date).toLocaleDateString(),
+            });
           }
         }
 
+        // Filter for files that still exist in HEAD
         const fileDetails = [];
-
-        // Update the loop to use existingFiles instead of files
-        for (const file of existingFiles) {
-          const lastModifiedResult =
-            await $`git log -1 --format="%ad" -- "${file}"`
-              .cwd(absolutePath)
-              .quiet();
-
-          if (lastModifiedResult.exitCode === 0) {
-            fileDetails.push({
-              path: file,
-              author: authorEmail,
-              lastModified: new Date(
-                lastModifiedResult.stdout.toString().trim()
-              ).toLocaleDateString(),
-            });
+        for (const [file, details] of fileMap) {
+          const fileCheck = await $`git cat-file -e HEAD:"${file}"`
+            .cwd(absolutePath)
+            .quiet();
+          if (fileCheck.exitCode === 0) {
+            fileDetails.push(details);
           }
         }
 
