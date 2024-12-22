@@ -1,5 +1,7 @@
 import { serve } from "bun";
 import { $ } from "bun";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 // Define CORS headers
 const corsHeaders = {
@@ -23,6 +25,60 @@ serve({
       });
     }
 
+    // New endpoint to resolve directory paths
+    if (url.pathname === "/api/resolve-path" && req.method === "POST") {
+      try {
+        const formData = await req.formData();
+        const dirName = formData.get("dirHandle");
+
+        if (!dirName) {
+          return new Response(
+            JSON.stringify({
+              error: "Directory name is required",
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        // Get the current working directory
+        const pwdResult = await $`pwd`.quiet();
+        if (pwdResult.exitCode !== 0) {
+          throw new Error("Failed to get current directory");
+        }
+
+        const currentDir = pwdResult.stdout.toString().trim();
+        const resolvedPath = resolve(currentDir, dirName.toString());
+
+        return new Response(JSON.stringify({ path: resolvedPath }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        console.error("Error resolving path:", error);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to resolve directory path",
+            details: error instanceof Error ? error.message : String(error),
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+    }
+
     if (url.pathname === "/api/git/files" && req.method === "POST") {
       try {
         const { repoPath, authorEmail } = await req.json();
@@ -31,6 +87,24 @@ serve({
           return new Response(
             JSON.stringify({
               error: "Repository path and author email are required",
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        // Validate repository path
+        const absolutePath = resolve(repoPath);
+        if (!existsSync(absolutePath)) {
+          return new Response(
+            JSON.stringify({
+              error: "Repository path does not exist",
+              details: `Path ${absolutePath} was not found`,
             }),
             {
               status: 400,
@@ -61,7 +135,7 @@ serve({
         }
 
         // Verify if the path exists and is a git repository
-        const repoCheck = await $`git status`.cwd(repoPath).quiet();
+        const repoCheck = await $`git status`.cwd(absolutePath).quiet();
         if (repoCheck.exitCode !== 0) {
           return new Response(
             JSON.stringify({
@@ -82,7 +156,7 @@ serve({
         // Get all files that have been modified by the author
         const filesResult =
           await $`git log --all --pretty=format: --author="${authorEmail}" --name-only | sort -u`
-            .cwd(repoPath)
+            .cwd(absolutePath)
             .quiet();
 
         if (filesResult.exitCode !== 0) {
@@ -102,7 +176,7 @@ serve({
         for (const file of files) {
           const lastModifiedResult =
             await $`git log -1 --format="%ad" -- "${file}"`
-              .cwd(repoPath)
+              .cwd(absolutePath)
               .quiet();
 
           if (lastModifiedResult.exitCode === 0) {
@@ -155,7 +229,27 @@ serve({
           });
         }
 
-        const contentResult = await $`cat "${filePath}"`.cwd(repoPath).quiet();
+        // Validate repository path
+        const absolutePath = resolve(repoPath);
+        if (!existsSync(absolutePath)) {
+          return new Response(
+            JSON.stringify({
+              error: "Repository path does not exist",
+              details: `Path ${absolutePath} was not found`,
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        const contentResult = await $`cat "${filePath}"`
+          .cwd(absolutePath)
+          .quiet();
 
         if (contentResult.exitCode !== 0) {
           return new Response(

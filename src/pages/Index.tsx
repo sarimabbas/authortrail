@@ -1,19 +1,21 @@
-import { useState } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { darcula } from '@uiw/codemirror-theme-darcula';
+import { useState } from "react";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
+import { darcula } from "@uiw/codemirror-theme-darcula";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { GitFile, getAuthoredFiles, getFileContent } from '../utils/gitUtils';
-import { FolderOpen } from 'lucide-react';
+import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
+import { FolderOpen } from "lucide-react";
 
 const Index = () => {
-  const [repoPath, setRepoPath] = useState('');
-  const [authorEmail, setAuthorEmail] = useState('');
+  const [repoPath, setRepoPath] = useState("");
+  const [authorEmail, setAuthorEmail] = useState("");
   const [files, setFiles] = useState<GitFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string>('');
-  const [fileContent, setFileContent] = useState('// Select a file to view its content');
+  const [selectedFile, setSelectedFile] = useState<string>("");
+  const [fileContent, setFileContent] = useState(
+    "// Select a file to view its content"
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,36 +24,14 @@ const Index = () => {
       setFiles(authoredFiles);
       toast.success(`Found ${authoredFiles.length} files`);
     } catch (error) {
-      toast.error('Failed to get file history');
+      toast.error("Failed to get file history");
       console.error(error);
     }
   };
 
   const handleDirectorySelect = async () => {
-    // Check if the File System Access API is supported
-    if (!('showDirectoryPicker' in window)) {
-      toast.error(
-        'Your browser does not support directory selection. Please use Chrome, Edge, or another browser that supports the File System Access API.',
-        {
-          duration: 5000,
-        }
-      );
-      return;
-    }
-
-    try {
-      // @ts-ignore - showDirectoryPicker is not in TypeScript's DOM types yet
-      const dirHandle = await window.showDirectoryPicker();
-      setRepoPath(dirHandle.name);
-      toast.success('Directory selected');
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        // User cancelled the selection
-        return;
-      }
-      toast.error('Failed to select directory');
-      console.error(error);
-    }
+    setRepoPath(process.cwd());
+    toast.success("Using current directory");
   };
 
   const handleFileSelect = async (filePath: string) => {
@@ -60,7 +40,7 @@ const Index = () => {
       const content = await getFileContent(repoPath, filePath);
       setFileContent(content);
     } catch (error) {
-      toast.error('Failed to load file content');
+      toast.error("Failed to load file content");
       console.error(error);
     }
   };
@@ -71,19 +51,19 @@ const Index = () => {
         <form onSubmit={handleSubmit} className="flex gap-4">
           <div className="flex-1 flex gap-2">
             <Input
-              placeholder="Repository path"
+              placeholder="Repository path (e.g., /path/to/repo or . for current directory)"
               value={repoPath}
               onChange={(e) => setRepoPath(e.target.value)}
               className="flex-1"
             />
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={handleDirectorySelect}
               className="flex items-center gap-2"
             >
               <FolderOpen className="w-4 h-4" />
-              Browse
+              Use Current Dir
             </Button>
           </div>
           <Input
@@ -95,7 +75,7 @@ const Index = () => {
           <Button type="submit">Get Files</Button>
         </form>
       </div>
-      
+
       <div className="flex flex-1">
         <div className="w-1/3 bg-sidebar p-4 border-r border-border overflow-auto">
           <h2 className="text-xl font-bold mb-4">Files</h2>
@@ -104,7 +84,7 @@ const Index = () => {
               <div
                 key={file.path}
                 className={`p-2 hover:bg-accent rounded-md cursor-pointer ${
-                  selectedFile === file.path ? 'bg-accent' : ''
+                  selectedFile === file.path ? "bg-accent" : ""
                 }`}
                 onClick={() => handleFileSelect(file.path)}
               >
