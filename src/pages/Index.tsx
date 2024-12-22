@@ -5,7 +5,7 @@ import { darcula } from '@uiw/codemirror-theme-darcula';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { GitFile, getAuthoredFiles } from '../utils/gitUtils';
+import { GitFile, getAuthoredFiles, getFileContent } from '../utils/gitUtils';
 import { FolderOpen } from 'lucide-react';
 
 const Index = () => {
@@ -35,6 +35,17 @@ const Index = () => {
       toast.success('Directory selected');
     } catch (error) {
       toast.error('Failed to select directory');
+      console.error(error);
+    }
+  };
+
+  const handleFileSelect = async (filePath: string) => {
+    try {
+      setSelectedFile(filePath);
+      const content = await getFileContent(repoPath, filePath);
+      setFileContent(content);
+    } catch (error) {
+      toast.error('Failed to load file content');
       console.error(error);
     }
   };
@@ -71,15 +82,16 @@ const Index = () => {
       </div>
       
       <div className="flex flex-1">
-        {/* Left side - File Tree */}
         <div className="w-1/3 bg-sidebar p-4 border-r border-border overflow-auto">
           <h2 className="text-xl font-bold mb-4">Files</h2>
           <div className="space-y-2">
             {files.map((file) => (
               <div
                 key={file.path}
-                className="p-2 hover:bg-accent rounded-md cursor-pointer"
-                onClick={() => setSelectedFile(file.path)}
+                className={`p-2 hover:bg-accent rounded-md cursor-pointer ${
+                  selectedFile === file.path ? 'bg-accent' : ''
+                }`}
+                onClick={() => handleFileSelect(file.path)}
               >
                 <div className="font-medium">{file.path}</div>
                 <div className="text-sm text-muted-foreground">
@@ -90,7 +102,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Right side - Code Preview */}
         <div className="w-2/3 bg-background p-4">
           <CodeMirror
             value={fileContent}
