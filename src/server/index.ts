@@ -1,113 +1,180 @@
-import express, { Request, Response } from "express";
-import cors from "cors";
-import { exec } from "child_process";
-import { promisify } from "util";
-import path from "path";
+import { serve } from "bun";
+import { spawn } from "bun";
 
-const execAsync = promisify(exec);
-const app = express();
-const port = 3000;
+// Define CORS headers
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "http://localhost:8080",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
-app.use(cors());
-app.use(express.json());
+// Define the server
+serve({
+  async fetch(req) {
+    const url = new URL(req.url);
 
-app.post("/api/git/files", async (req: Request, res: Response) => {
-  try {
-    const { repoPath, authorEmail } = req.body;
-
-    if (!repoPath || !authorEmail) {
-      return res.status(400).json({
-        error: "Repository path and author email are required",
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        headers: corsHeaders,
       });
     }
 
-    // First verify if git is installed
-    try {
-      await execAsync("git --version");
-    } catch (error) {
-      console.error("Git is not installed:", error);
-      return res.status(500).json({
-        error: "Git is not installed on the system",
-      });
-    }
-
-    // Verify if the path exists and is a git repository
-    try {
-      await execAsync("git status", { cwd: repoPath });
-    } catch (error) {
-      console.error("Invalid git repository:", error);
-      return res.status(400).json({
-        error:
-          "Invalid git repository path. Please ensure the path exists and contains a git repository.",
-      });
-    }
-
-    // Get all files that have been modified by the author
-    const { stdout } = await execAsync(
-      `git log --all --pretty=format: --author="${authorEmail}" --name-only | sort -u`,
-      {
-        cwd: repoPath,
-        // Explicitly set shell to true for Windows compatibility
-        shell: true,
-      }
-    );
-
-    const files = stdout.trim().split("\n").filter(Boolean);
-    const fileDetails = [];
-
-    // Get blame info for each file
-    for (const file of files) {
+    if (url.pathname === "/api/git/files" && req.method === "POST") {
       try {
-        const { stdout: lastModified } = await execAsync(
-          `git log -1 --format="%ad" -- "${file}"`,
-          {
-            cwd: repoPath,
-            shell: true,
-          }
+        const { repoPath, authorEmail } = await req.json();
+
+        if (!repoPath || !authorEmail) {
+          return new Response(
+            JSON.stringify({
+              error: "Repository path and author email are required",
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        // Verify if git is installed
+        const gitVersionProc = spawn(["git", "--version"]);
+        await gitVersionProc.exited;
+        if (gitVersionProc.exitCode !== 0) {
+          return new Response(
+            JSON.stringify({ error: "Git is not installed on the system" }),
+            {
+              status: 500,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        // Verify if the path exists and is a git repository
+        const gitStatusProc = spawn(["git", "status"], { cwd: repoPath });
+        await gitStatusProc.exited;
+        if (gitStatusProc.exitCode !== 0) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Invalid git repository path. Please ensure the path exists and contains a git repository.",
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            }
+          );
+        }
+
+        // Get all files that have been modified by the author
+        const gitLogProc = spawn(
+          [
+            "git",
+            "log",
+            "--all",
+            "--pretty=format:",
+            `--author="${authorEmail}"`,
+            "--name-only",
+            "|",
+            "sort",
+            "-u",
+          ],
+          { cwd: repoPath }
         );
 
-        fileDetails.push({
-          path: file,
-          author: authorEmail,
-          lastModified: new Date(lastModified).toLocaleDateString(),
+        const stdout = await new Response(gitLogProc.stdout).text();
+        const files = stdout.trim().split("\n").filter(Boolean);
+        const fileDetails = [];
+
+        // Get blame info for each file
+        for (const file of files) {
+          const gitLogFileProc = spawn(
+            ["git", "log", "-1", `--format="%ad"`, `-- "${file}"`],
+            { cwd: repoPath }
+          );
+
+          const lastModified = await new Response(gitLogFileProc.stdout).text();
+          fileDetails.push({
+            path: file,
+            author: authorEmail,
+            lastModified: new Date(lastModified).toLocaleDateString(),
+          });
+        }
+
+        return new Response(JSON.stringify(fileDetails), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
         });
       } catch (error) {
-        console.error(`Error getting details for file ${file}:`, error);
-        // Continue with other files even if one fails
+        console.error("Error getting authored files:", error);
+        return new Response(
+          JSON.stringify({
+            error:
+              "Failed to get file history. Please ensure git is installed and the repository path is correct.",
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
       }
     }
 
-    res.json(fileDetails);
-  } catch (error) {
-    console.error("Error getting authored files:", error);
-    res.status(500).json({
-      error:
-        "Failed to get file history. Please ensure git is installed and the repository path is correct.",
-    });
-  }
-});
+    if (url.pathname === "/api/git/content" && req.method === "GET") {
+      try {
+        const { repoPath, filePath } = Object.fromEntries(url.searchParams);
 
-app.get("/api/git/content", async (req: Request, res: Response) => {
-  try {
-    const { repoPath, filePath } = req.query;
+        if (typeof repoPath !== "string" || typeof filePath !== "string") {
+          return new Response(JSON.stringify({ error: "Invalid parameters" }), {
+            status: 400,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          });
+        }
 
-    if (typeof repoPath !== "string" || typeof filePath !== "string") {
-      res.status(400).json({ error: "Invalid parameters" });
-      return;
+        const catProc = spawn(["cat", filePath], { cwd: repoPath });
+        const stdout = await new Response(catProc.stdout).text();
+
+        return new Response(JSON.stringify({ content: stdout }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        console.error("Error getting file content:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to get file content" }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      }
     }
 
-    const { stdout } = await execAsync(`cat "${filePath}"`, {
-      cwd: repoPath,
-      shell: true,
+    return new Response("404!", {
+      status: 404,
+      headers: corsHeaders,
     });
-
-    res.json({ content: stdout });
-  } catch (error) {
-    console.error("Error getting file content:", error);
-    res.status(500).json({ error: "Failed to get file content" });
-  }
-});
-
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  },
+  port: 3000,
 });
