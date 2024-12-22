@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
@@ -36,27 +37,64 @@ import { getIconForFile, FolderIcon } from "../utils/fileIcons";
 
 interface ExtendedTreeDataItem extends TreeDataItem {
   className?: string;
+  badge?: number;
+  render?: (item: ExtendedTreeDataItem) => React.ReactNode;
 }
 
-const createFileTree = (files: GitFile[]): ExtendedTreeDataItem[] => {
-  const buildNode = (
-    path: string[],
-    isFile: boolean,
-    file?: GitFile
-  ): ExtendedTreeDataItem => {
-    const fileName = path[path.length - 1];
-    return {
-      id: path.join("/"),
-      name: isFile ? `${fileName} (${file?.lastModified})` : fileName,
-      icon: () => <FileTreeIcon filename={fileName} />,
-      children: isFile ? undefined : [],
-      className: "flex items-center gap-2 py-1",
-    };
-  };
+interface TreeItemContextValue {
+  badge?: number;
+}
 
+const TreeItemContext = React.createContext<TreeItemContextValue>({});
+
+const TreeItemWrapper = ({ item }: { item: ExtendedTreeDataItem }) => {
+  return (
+    <TreeItemContext.Provider value={{ badge: item.badge }}>
+      <div className={item.className}>
+        {item.icon?.()}
+        <span>{item.name}</span>
+      </div>
+    </TreeItemContext.Provider>
+  );
+};
+
+const buildNode = (
+  path: string[],
+  isFile: boolean,
+  file?: GitFile,
+  childCount?: number
+): ExtendedTreeDataItem => {
+  const fileName = path[path.length - 1];
+  const displayName = isFile
+    ? `${fileName} (${file?.lastModified})`
+    : childCount !== undefined
+    ? `${fileName} (${childCount})`
+    : fileName;
+
+  return {
+    id: path.join("/"),
+    name: displayName,
+    icon: () => <FileTreeIcon filename={fileName} />,
+    children: isFile ? undefined : [],
+    className: "flex items-center gap-2 py-1",
+  };
+};
+
+const createFileTree = (files: GitFile[]): ExtendedTreeDataItem[] => {
   const root: ExtendedTreeDataItem[] = [];
   const nodeMap = new Map<string, ExtendedTreeDataItem>();
+  const folderCounts = new Map<string, number>();
 
+  // First pass: count files in each folder
+  files.forEach((file) => {
+    const parts = file.path.split("/");
+    parts.slice(0, -1).forEach((_, index) => {
+      const folderPath = parts.slice(0, index + 1).join("/");
+      folderCounts.set(folderPath, (folderCounts.get(folderPath) || 0) + 1);
+    });
+  });
+
+  // Second pass: create tree with counts
   files.forEach((file) => {
     const parts = file.path.split("/");
 
@@ -66,7 +104,13 @@ const createFileTree = (files: GitFile[]): ExtendedTreeDataItem[] => {
       const isFile = index === parts.length - 1;
 
       if (!nodeMap.has(currentPathStr)) {
-        const node = buildNode(currentPath, isFile, isFile ? file : undefined);
+        const childCount = folderCounts.get(currentPathStr);
+        const node = buildNode(
+          currentPath,
+          isFile,
+          isFile ? file : undefined,
+          childCount
+        );
         nodeMap.set(currentPathStr, node);
 
         if (index === 0) {
@@ -149,18 +193,19 @@ const Header = () => (
 );
 
 const FileTreeIcon = ({ filename }: { filename: string }) => {
-  // Return folder icon if no extension (directory)
-  if (!filename.includes(".")) {
-    return (
-      <div className="flex items-center justify-center w-5 h-5">
-        <FolderIcon />
-      </div>
-    );
-  }
+  const { badge } = (React.useContext(TreeItemContext) ||
+    {}) as TreeItemContextValue;
 
   return (
-    <div className="flex items-center justify-center w-5 h-5">
-      {getIconForFile(filename)}
+    <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center w-5 h-5">
+        {!filename.includes(".") ? <FolderIcon /> : getIconForFile(filename)}
+      </div>
+      {badge !== undefined && (
+        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-muted">
+          {badge}
+        </span>
+      )}
     </div>
   );
 };
