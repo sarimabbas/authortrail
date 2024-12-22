@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { darcula } from "@uiw/codemirror-theme-darcula";
@@ -6,16 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { GitFile, getAuthoredFiles, getFileContent } from "../utils/gitUtils";
-import { FolderOpen } from "lucide-react";
 
 const Index = () => {
-  const [repoPath, setRepoPath] = useState("");
-  const [authorEmail, setAuthorEmail] = useState("");
+  const [repoPath, setRepoPath] = useState(
+    () => localStorage.getItem("repoPath") || ""
+  );
+  const [authorEmail, setAuthorEmail] = useState(
+    () => localStorage.getItem("authorEmail") || ""
+  );
   const [files, setFiles] = useState<GitFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [fileContent, setFileContent] = useState(
     "// Select a file to view its content"
   );
+
+  useEffect(() => {
+    localStorage.setItem("repoPath", repoPath);
+  }, [repoPath]);
+
+  useEffect(() => {
+    localStorage.setItem("authorEmail", authorEmail);
+  }, [authorEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +38,6 @@ const Index = () => {
       toast.error("Failed to get file history");
       console.error(error);
     }
-  };
-
-  const handleDirectorySelect = async () => {
-    setRepoPath(process.cwd());
-    toast.success("Using current directory");
   };
 
   const handleFileSelect = async (filePath: string) => {
@@ -49,23 +55,12 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <div className="p-4 border-b border-border">
         <form onSubmit={handleSubmit} className="flex gap-4">
-          <div className="flex-1 flex gap-2">
-            <Input
-              placeholder="Repository path (e.g., /path/to/repo or . for current directory)"
-              value={repoPath}
-              onChange={(e) => setRepoPath(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDirectorySelect}
-              className="flex items-center gap-2"
-            >
-              <FolderOpen className="w-4 h-4" />
-              Use Current Dir
-            </Button>
-          </div>
+          <Input
+            placeholder="Repository path (e.g., /path/to/repo)"
+            value={repoPath}
+            onChange={(e) => setRepoPath(e.target.value)}
+            className="flex-1"
+          />
           <Input
             placeholder="Author email"
             value={authorEmail}
