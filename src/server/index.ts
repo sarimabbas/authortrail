@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -10,7 +10,7 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-app.post('/api/git/files', async (req: Request, res: Response) => {
+app.post('/api/git/files', async (req, res) => {
   try {
     const { repoPath, authorEmail } = req.body;
     
@@ -44,12 +44,13 @@ app.post('/api/git/files', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/git/content', async (req: Request, res: Response) => {
+app.get('/api/git/content', async (req, res) => {
   try {
     const { repoPath, filePath } = req.query;
     
     if (typeof repoPath !== 'string' || typeof filePath !== 'string') {
-      return res.status(400).json({ error: 'Invalid parameters' });
+      res.status(400).json({ error: 'Invalid parameters' });
+      return;
     }
 
     const { stdout } = await execAsync(
