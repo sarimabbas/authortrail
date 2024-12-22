@@ -93,11 +93,9 @@ const Index = () => {
         branch
       );
 
-      const endTime = Date.now();
-      const totalMs = endTime - (startTime || endTime);
       const timeMessage =
-        totalMs < 1000
-          ? `${totalMs}ms`
+        elapsedTime === 0
+          ? "less than a second"
           : `${elapsedTime} ${elapsedTime === 1 ? "second" : "seconds"}`;
 
       setFiles(authoredFiles);
@@ -107,7 +105,6 @@ const Index = () => {
       console.error(error);
     } finally {
       setIsLoading(false);
-      setStartTime(null);
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
